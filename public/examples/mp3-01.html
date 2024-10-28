@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>emotile - mp3 example 01</title>
+<style>
+@font-face {
+  font-family: NotoSans;
+  src: url('/fonts/NotoSans-VariableFont_wdth,wght.ttf') format('truetype')
+}
+
+:root {
+  --orange: #FB5607;
+  --yellow: #FFBE0B;
+  --warm-white: #FFFAF8;
+  --cool-white: #FAFAFA;
+  --green: #65C200;
+  --blue: #3A86FF;
+} 
+  
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'NotoSans', 'Helvetica', 'Arial', sans-serif;
+  user-select: none;
+  -webkit-user-select: none !important;
+  touch-action: none;
+}
+body {
+  background: linear-gradient(136deg, var(--cool-white), var(--warm-white));
+} 
+.display {
+  position: fixed;
+  top: 0; 
+  left: 0; 
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+#start {
+  transition: opacity 0.5s;
+  
+  span {
+    font-size: 5vmin;
+    color: var(--orange);
+  }
+}
+.hidden {
+  display: none;
+}
+.box {
+  width: 25vmin; 
+  height: 25vmin; 
+  transform: scale(0);
+  transition: opacity 1s, background 1s, border-radius 1s, box-shadow 1s;
+}
+.box_shadow {
+  box-shadow: 1vmin 1vmin 1vmin #fff8 inset, -1vmin -1vmin 1vmin #7778 inset;
+}
+.yellow {
+  background: var(--yellow);
+}
+.green {
+  background: var(--green);
+}
+.blue {
+  background: var(--blue);
+}
+.corners {
+  border-radius: 5vmin;
+}
+.oof {
+  opacity: 0;
+}
+</style>
+</head>
+<body>
+<div id="boxes" class="display hidden oof">
+  <div id="box1" class="box box_shadow corners yellow"></div>
+</div>
+<span id="start" class="display oof"><span>turn up your sound then<br/>click/tap to start</span></span>
+</body>
+
+<script type="module">
+// Import emotile.js module
+import { default as emotile } from '/emotile.js';
+
+// Instantiate emotile object with minimum configuration
+const emotile_instance = new emotile({
+  url: 'https://awe.media/funkit.mp3', // Point to your audio - this one is by https://audiojungle.net/user/stocksounds
+  update: (level) => { // Setup a function that updates your UI based on the audio levels
+    divs.forEach((div) => {
+      // Start experimenting here...
+      div.style.transform = `scale(${level * 2})`; // This is where all the magic happens. It's that simple!
+    });
+  },
+});
+
+// Cache DOM elements for reuse
+const divs = [document.getElementById('box1')];
+const start_div = document.getElementById('start');
+const boxes_div = document.getElementById('boxes');
+
+// Set initial visibility state for start button
+toggle_class(start_div, 'oof', false);
+
+// The initialization must be started by a user gesture to allow audio to play 
+if ('ontouchstart' in window) {
+  start_div.ontouchstart = start;
+} else {
+  start_div.onclick = start;
+}
+
+// Function to initialize and start the interaction
+async function start() {
+  await emotile_instance.initialize(); // Make sure there's no promises or awaits before this call!
+
+  // Clear event assignments used for starting the sequence
+  start_div.ontouchstart = null;
+  start_div.onclick = null;
+
+  // Hide start button by setting 'oof' class
+  toggle_class(start_div, 'oof', true);
+  toggle_class(boxes_div, 'hidden', false);
+  toggle_class(boxes_div, 'oof', false);
+
+  // Initiate audio play when setup sequence concludes
+  emotile_instance.audio.play();
+}
+
+// Helper function to manage DOM class changes
+function toggle_class(element, class_name, should_add) {
+  if (should_add) {
+    element.classList.add(class_name);
+  } else {
+    element.classList.remove(class_name);
+  }
+}
+
+</script>
+</html>
