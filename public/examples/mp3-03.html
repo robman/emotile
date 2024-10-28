@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>emotile - mp3 example 01</title>
+<title>emotile - mp3 example 03</title>
 <style>
 @font-face {
   font-family: NotoSans;
@@ -11,6 +11,7 @@
 }
 
 :root {
+  --white: #FFF;
   --orange: #FB5607;
   --yellow: #FFBE0B;
   --warm-white: #FFFAF8;
@@ -31,7 +32,7 @@ body, html {
   touch-action: none;
 }
 body {
-  background: linear-gradient(136deg, var(--cool-white), var(--warm-white));
+  background: var(--orange);
 } 
 .display {
   position: fixed;
@@ -49,7 +50,7 @@ body {
   
   span {
     font-size: 5vmin;
-    color: var(--orange);
+    color: var(--yellow);
   }
 }
 .hidden {
@@ -58,7 +59,6 @@ body {
 .box {
   width: 25vmin; 
   height: 25vmin; 
-  transform: scale(0);
   transition: opacity 1s, background 1s, border-radius 1s, box-shadow 1s;
 }
 .box_shadow {
@@ -97,8 +97,13 @@ const emotile_instance = new emotile({
   url: 'https://awe.media/funkit.mp3', // Point to your audio - this one is by https://audiojungle.net/user/stocksounds
   update: (level) => { // Setup a function that updates your UI based on the audio levels
     // Start experimenting here...
+
     // This is where all the magic happens. This updates the scale of the box. It's that simple!
-    box1.style.transform = `scale(${level * 2})`; 
+    box1.style.transform = `scale(${level * 2})`;
+
+    // Here's an example of updating a linear gradient using the audio level
+    let top = Math.min(Math.round(level*2*100), 100);
+    document.body.style.background = `linear-gradient(0deg, var(--blue) 0 ${top}%, var(--orange) ${top}% 100%)`;
   },
 });
 

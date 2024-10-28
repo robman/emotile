@@ -100,11 +100,14 @@ function create_timeline() {
 
 // Function to initialize and start the interaction
 async function start() {
-  await emotile_instance.initialize();
-
   // Clear event assignments used for starting the sequence
   start_div.ontouchstart = null;
   start_div.onclick = null;
+
+  // Hide start button by setting 'oof' class
+  toggle_class(start_div, 'oof', true);
+
+  await emotile_instance.initialize(); // Make sure there's no promises or awaits before this call!
 
   // Define actions that coincide with message reveal
   const message_actions = [
@@ -125,9 +128,6 @@ async function start() {
       toggle_class(box2, 'green', true);
     },
   ];
-
-  // Hide start button by setting 'oof' class
-  toggle_class(start_div, 'oof', true);
 
   // Reveal and cycle through messages with corresponding actions
   toggle_class(message_container, 'hidden', false);
