@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+:root {
+  --white: #FFFFFF;
+  --grey: #ccc8;
+  --light-1: #fdfbf4;
+  --light-2: #dadbeaf5; 
+  --red: #D62828;
+  --dark-blue: #003049;
+  --orange: #FCBF49;
+  --dark-orange: #F77F00;
+}
+
+html, body {
+  position: fixed;
+  top: 0;
+  left: 0;
+  margin: 0; 
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: 'Helvetica', 'Arial', sans-serif;
+}
+body {
+  background: linear-gradient(136deg, var(--light-1), var(--light-2));
+}
+#example {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: 1fr;
+  justify-items: center;
+  align-items: center;
+  transform: scale(2.0);
+  transition: opacity 0.5s;
+}
+#speaker {
+  grid-row: 1/2;
+  grid-column: 1/2;
+  width: 6rem;
+  height: 6rem;
+  margin: 0.6rem;
+  border-radius: 50%;
+  border: 0.5px solid var(--grey);
+  z-index: 300;
+  background: url('/img/grill.jpg') no-repeat center center fixed;
+  background-size: 150%;
+  overflow: hidden;
+  box-shadow: 0.6em 0.6em 0.6em #fff4 inset, -0.6em -0.6em 0.6em #0009 inset;
+  cursor: pointer;
+}
+.sound_wave {
+  grid-row: 1/2;
+  grid-column: 1/2;
+  width: 6rem;
+  height: 6rem;
+  border-radius: 50%;
+  filter: blur(2px);
+  z-index: 100;
+  box-shadow: 0.4rem 0.4rem 0.8rem var(--light-2), -0.4rem -0.4rem 0.8rem var(--white);
+  background: linear-gradient(to bottom right, var(--light-2) 0%, var(--white) 100%);
+}
+
+.display {
+  position: fixed;
+  top: 0; 
+  left: 0; 
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+#start {
+  transition: opacity 0.5s;
+ 
+  span {
+    font-size: 5vmin; 
+    color: var(--dark-blue);
+  }
+}   
+.hidden {
+  display: none;
+} 
+.oof {
+  opacity: 0;
+}
+</style>
+</head>
+<body>
+<div id="example" class="hidden oof">
+  <span id="speaker"></span>
+  <span id="sw0" class="sound_wave"></span>
+  <span id="sw1" class="sound_wave"></span>
+  <span id="sw2" class="sound_wave"></span>
+  <span id="sw3" class="sound_wave"></span>
+  <span id="sw4" class="sound_wave"></span>
+  <span id="sw5" class="sound_wave"></span>
+</div>
+<span id="start" class="display oof"><span>turn up your sound then<br/>click/tap to start</span></span>
+</body>
+<script type="module">
+// Import emotile.js module
+import { default as emotile } from '/emotile.js';
+
+// Instantiate emotile object with minimum configuration
+const emotile_instance = new emotile({
+  url: 'https://awe.media/funkit.mp3', // Point to your audio - this one is by https://audiojungle.net/user/stocksounds
+  update: (level) => { // Setup a function that updates your UI based on the audio levels
+    // Start experimenting here...
+    // This is where all the magic happens.
+    sound_wave_id = Math.round(new Date().getMilliseconds()/200); // Get a new wave id
+    if (level*2 > 0.5 && animations[sound_wave_id].playState !== 'running') { animate(sound_wave_id, 4); } // Animate the wave
+    speaker.style.transform = `scale(${1+(level/10)})`; // Make the speaker look like it's bouncing
+    speaker.style.filter = `blur(${level*3}px)`; // Make the speaker look like it has motion blur - just using standard blur
+  },
+});
+
+// Cache DOM elements for reuse
+const start_div = document.getElementById('start');
+const example_div = document.getElementById('example');
+const speaker = document.getElementById('speaker');
+
+// Set initial visibility state for start button
+toggle_class(start_div, 'oof', false);
+
+// The initialization must be started by a user gesture to allow audio to play
+if ('ontouchstart' in window) {
+  window.ontouchstart = start;
+} else {
+  window.onclick = start;
+}
+
+// Function to initialize and start the interaction
+async function start() {
+  // Clear event assignments used for starting the sequence
+  window.ontouchstart = null;
+  window.onclick = null;
+
+  // Hide start button by setting 'oof' class
+  toggle_class(start_div, 'oof', true);
+
+  await emotile_instance.initialize(); // Make sure there's no promises or awaits before this call!
+
+  // Show the box
+  toggle_class(example_div, 'hidden', false);
+  toggle_class(example_div, 'oof', false);
+
+  // Initiate audio play when setup sequence concludes
+  emotile_instance.audio.play();
+}
+
+// Helper function to manage DOM class changes
+function toggle_class(element, class_name, should_add) {
+  if (should_add) {
+    element.classList.add(class_name);
+  } else {
+    element.classList.remove(class_name);
+  }
+}
+
+// Setup sound wave animations
+let animations = [];
+let sound_wave_id = 1;
+const wave_animation = [
+  { transform: "scale(1)", opacity: "1" },
+  { opacity: "0.6" },
+  { transform: "scale(3)", opacity: "0" }
+];
+const waves = [
+  document.getElementById('sw0'),
+  document.getElementById('sw1'),
+  document.getElementById('sw2'),
+  document.getElementById('sw3'),
+  document.getElementById('sw4'),
+  document.getElementById('sw5'),
+];
+waves.forEach((wave) => {
+  var animation = wave.animate(wave_animation, {
+    duration: 2000,
+    iterations: 1
+  });
+  animation.pause();
+  animations.push(animation);
+}); 
+function animate(n, speed=1) {
+  animations[n].finish();
+  animations[n].updatePlaybackRate(speed);
+  animations[n].play();
+}
+
+</script>
+</html>
