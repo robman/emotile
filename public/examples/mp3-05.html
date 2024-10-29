@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>emotile - mp3 example 01</title>
+<style>
+@font-face {
+  font-family: NotoSans;
+  src: url('../fonts/NotoSans-VariableFont_wdth,wght.ttf') format('truetype')
+}
+
+:root {
+  --orange: #FB5607;
+  --yellow: #FFBE0B;
+  --warm-white: #FFFAF8;
+  --cool-white: #FAFAFA;
+  --green: #65C200;
+  --blue: #3A86FF;
+} 
+  
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'NotoSans', 'Helvetica', 'Arial', sans-serif;
+  user-select: none;
+  -webkit-user-select: none !important;
+  touch-action: none;
+}   
+body { 
+  background: linear-gradient(136deg, var(--cool-white), var(--warm-white));
+} 
+#canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+}
+#video {
+  display: none;
+}
+.display {
+  position: fixed;
+  top: 0; 
+  left: 0; 
+  width: 100%;
+  height: 100%; 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+#start {
+  transition: opacity 0.5s;
+  
+  span {
+    font-size: 5vmin; 
+    color: var(--orange);
+  }
+}
+.hidden {
+  display: none; 
+} 
+.oof {
+  opacity: 0;
+}
+</style>
+</head>
+<body>
+<div id="example" class="display hidden oof"></div>
+<span id="start" class="display oof"><span>turn up your sound then<br/>click/tap to start</span></span>
+<script type="module">
+// The default is the swirl shader - see lots more example shaders below
+const [vertex_shader_source, fragment_shader_source] = get_shader_source();
+
+// Import emotile_webgl module
+import { default as emotile_webgl } from '../emotile_webgl.js';
+
+// Create an instance of emotile_webgl with specified parameters
+const emotile_webgl_instance = new emotile_webgl({
+  container: document.getElementById('example'),  // Container element for video and canvas
+  video_id: 'video',                              // ID for the video element
+  canvas_id: 'canvas',                            // ID for the canvas element
+  vertex_shader_source: vertex_shader_source,     // Custom vertex shader
+  fragment_shader_source: fragment_shader_source, // Custom fragment shader
+});
+
+// Initialize the camera to start capturing video
+emotile_webgl_instance.init_camera();
+
+// Import emotile.js module, a library for audio analysis
+import { default as emotile } from '../emotile.js';
+
+// Initialize global input variable to be used by the effect
+var input = 0;
+
+// Instantiate emotile with audio URL and update callback
+const emotile_instance = new emotile({
+  url: 'https://awe.media/funkit.mp3', // Audio track URL
+  update: (level) => {                // Update UI with audio levels
+    // Adjust input based on audio level, capping at 1.0
+    emotile_webgl_instance.input = Math.min(level * 2, 1.0); 
+  }
+});
+
+// Cache references to DOM elements for efficient reuse
+const start_div = document.getElementById('start');
+const example = document.getElementById('example');
+
+// Initially show the start button
+toggle_class(start_div, 'oof', false);
+
+// Bind touch or click event to start the app based on user interaction
+if ('ontouchstart' in window) {
+  start_div.ontouchstart = start;
+} else {
+  start_div.onclick = start;
+}
+
+// Function to handle start sequence initiated by user
+async function start() {
+  // Remove event listeners after the first interaction
+  start_div.ontouchstart = null;
+  start_div.onclick = null;
+
+  // Hide the start button by adding 'oof' class
+  toggle_class(start_div, 'oof', true);
+
+  // Initialize the emotile instance, necessary before playing audio
+  await emotile_instance.initialize();
+
+  // Display the example container that holds video and effects
+  toggle_class(example, 'hidden', false);
+  toggle_class(example, 'oof', false);
+
+  // Start audio playback to drive visual effects
+  emotile_instance.audio.play();
+}
+
+// Utility function to toggle a CSS class on a DOM element
+function toggle_class(element, class_name, should_add) {
+  if (should_add) {
+    element.classList.add(class_name);  // Add class if should_add is true
+  } else {
+    element.classList.remove(class_name);  // Remove class if should_add is false
+  }
+}
+
+
+function get_shader_source() {
+  // Define the swirl vertex shader source
+  const vertex_shader_source = `
+    attribute vec4 a_position;          
+    attribute vec2 a_texCoord; 
+    varying vec2 v_texCoord;
+    
+    void main() {
+      gl_Position = a_position;     // Set vertex position
+      v_texCoord = a_texCoord;      // Pass texture coordinates to fragment shader
+    }
+  `;
+
+  // Define the swirl fragment shader source
+  const fragment_shader_source = `
+    precision mediump float;
+    uniform sampler2D u_video;
+    uniform float u_input_variable; // Controls degree of bubble and swirl effect
+    varying vec2 v_texCoord;
+
+    void main() {
+      // Center the texture coordinates around origin
+      vec2 uv = v_texCoord - 0.5;
+
+      // Compute the distance from center
+      float dist = length(uv);
+
+      // Calculate swirl angle based on distance and input_variable
+      float angle = u_input_variable * dist * 8.0;
+
+      // Apply swirl effect using rotation matrix
+      uv = mix(uv, vec2(
+        uv.x * cos(angle) - uv.y * sin(angle),
+        uv.x * sin(angle) + uv.y * cos(angle)
+      ) * dist, u_input_variable);
+
+      // Shift coordinates back to original placing
+      uv += 0.5;
+
+      // Sample color using transformed coordinates
+      vec4 color = texture2D(u_video, uv);
+
+      gl_FragColor = color;  // Output the final pixel color
+    }
+  `;
+
+  return [vertex_shader_source, fragment_shader_source];
+}
+
+// more example shaders included below
+
+/*
+// edge tracing
+const vertex_shader_source = `
+  attribute vec4 a_position;
+  attribute vec2 a_texCoord;
+  varying vec2 v_texCoord;
+
+  void main() {
+    gl_Position = a_position;
+    v_texCoord = a_texCoord;
+  }
+`;
+
+const fragment_shader_source = `
+  precision mediump float;
+  uniform sampler2D u_video;
+  uniform float u_input_variable;
+  uniform vec2 u_resolution;
+  varying vec2 v_texCoord;
+
+  void main() {
+    vec2 one_pixel = vec2(1.0, 1.0) / u_resolution;
+
+    float kernel[9];
+    kernel[0] = -1.0;
+    kernel[1] = -1.0;
+    kernel[2] = -1.0;
+    kernel[3] = -1.0;
+    kernel[4] =  8.0;
+    kernel[5] = -1.0;
+    kernel[6] = -1.0;
+    kernel[7] = -1.0;
+    kernel[8] = -1.0;
+
+    float kernel_norm = 4.0;
+    kernel[4] = 8.0 + u_input_variable * kernel_norm;
+
+    vec3 sample_tex[9];
+
+    for (int i = -1; i <= 1; i++) {
+      for (int j = -1; j <= 1; j++) {
+        sample_tex[(i+1) * 3 + (j+1)] = texture2D(u_video, v_texCoord + vec2(float(i), float(j)) * one_pixel).rgb;
+      }
+    }
+
+    vec3 edge = vec3(0.0);
+    for (int i = 0; i < 9; i++) {
+       edge += sample_tex[i] * kernel[i];
+    }
+
+    edge = abs(edge);
+    gl_FragColor = vec4(edge, 1.0);
+  }
+`;
+*/
+
+
+/*
+// swirl shader
+const vertex_shader_source = `
+  attribute vec4 a_position;
+  attribute vec2 a_texCoord;
+  varying vec2 v_texCoord;
+
+  void main() {
+    gl_Position = a_position;
+    v_texCoord = a_texCoord;
+  }
+`;
+const fragment_shader_source = `
+  precision mediump float;   
+  uniform sampler2D u_video;
+  uniform float u_input_variable; // 0.0 no effect, 1.0 full bubble and swirl
+  varying vec2 v_texCoord;
+
+  void main() {
+    // Center the coordinates
+    vec2 uv = v_texCoord - 0.5;
+
+    // Calculate distance
+    float dist = length(uv);
+
+    // Apply distortion: no effect when u_input_variable is 0.0
+    float angle = u_input_variable * dist * 8.0;    
+
+    // Mix uv with its transformed version based on the input variable
+    uv = mix(uv, vec2(
+      uv.x * cos(angle) - uv.y * sin(angle),
+      uv.x * sin(angle) + uv.y * cos(angle)
+    ) * dist, u_input_variable);
+
+    // Shift the coordinates back to original place
+    uv += 0.5;
+
+    // Fetch the color from the transformed coordinates
+    vec4 color = texture2D(u_video, uv);
+
+    gl_FragColor = color;
+  }
+`;
+*/
+
+/*
+// pixelation
+const vertex_shader_source = `
+  attribute vec4 a_position;
+  attribute vec2 a_texCoord;
+  varying vec2 v_texCoord;
+
+  void main() {
+    gl_Position = a_position;
+    v_texCoord = a_texCoord;
+  }
+`;
+
+const fragment_shader_source = `
+  precision mediump float;
+  uniform sampler2D u_video;
+  uniform float u_input_variable; // Used as pixelation_level
+  uniform vec2 u_resolution;
+  varying vec2 v_texCoord;
+
+  void main() {
+    vec2 pixel_size = vec2(u_input_variable * 10.0) / u_resolution;
+    vec2 coords = v_texCoord / pixel_size;
+    coords = floor(coords) * pixel_size;
+    vec4 color = texture2D(u_video, coords);
+    gl_FragColor = color;
+  }
+`;
+*/
+
+/*
+// colour shift & tint
+const vertex_shader_source = `
+  attribute vec4 a_position;
+  attribute vec2 a_texCoord;
+  varying vec2 v_texCoord;
+
+  void main() {
+    gl_Position = a_position;
+    v_texCoord = a_texCoord;
+  }
+`;
+
+const fragment_shader_source = `
+  precision mediump float;
+  uniform sampler2D u_video;
+  uniform float u_input_variable; // Controls color shift degree
+  varying vec2 v_texCoord;
+
+  void main() {
+    vec4 color = texture2D(u_video, v_texCoord);
+
+    // Calculate shifted hue
+    color.r = mix(color.r, color.r * cos(u_input_variable * 3.14159), u_input_variable/2.0);
+    color.g = mix(color.g, color.g * sin(u_input_variable * 3.14159 + 1.0), u_input_variable/2.0);
+    color.b = mix(color.b, color.b * cos(u_input_variable * 3.14159 + 2.0), u_input_variable/2.0);
+
+    gl_FragColor = color;
+  }
+`;
+*/
+
+/*
+// radial blur
+const vertex_shader_source = `
+  attribute vec4 a_position;
+  attribute vec2 a_texCoord;
+  varying vec2 v_texCoord;
+
+  void main() {
+    gl_Position = a_position;
+    v_texCoord = a_texCoord;
+  }
+`;
+
+const fragment_shader_source = `
+  precision mediump float;
+  uniform sampler2D u_video;
+  uniform float u_input_variable; // Controls blur intensity from center
+  uniform vec2 u_resolution;
+  varying vec2 v_texCoord;
+
+  void main() {
+    vec2 uv = v_texCoord - 0.5;
+    float dist = length(uv);
+
+    vec4 color = texture2D(u_video, v_texCoord);
+    vec4 summedColor = vec4(0.0);
+    float total_weight = 0.0;
+
+    // Progress from no blur (0.0) to full blur (1.0) based on input_variable
+    for (float i = 0.0; i < 1.0; i += 0.1) {
+      //vec2 offset = uv * dist * u_input_variable * 2.0 * i;
+      vec2 offset = uv * dist * u_input_variable * i;
+      summedColor += texture2D(u_video, v_texCoord + offset);
+      total_weight += 1.0;
+    }
+
+    color = mix(color, summedColor / total_weight, u_input_variable);
+
+    gl_FragColor = color;
+  }
+`;
+*/
+
+/*
+// kaleidescope
+const vertex_shader_source = `
+  attribute vec4 a_position;
+  attribute vec2 a_texCoord;
+  varying vec2 v_texCoord;
+
+  void main() {    
+    gl_Position = a_position;
+    v_texCoord = a_texCoord;
+  }
+`;
+
+const fragment_shader_source = `
+  precision mediump float;
+  uniform sampler2D u_video;
+  uniform float u_input_variable; // Controls kaleidoscope intensity
+  varying vec2 v_texCoord;      
+
+  void main() {
+    // Center coordinates around (0.5, 0.5)
+    vec2 uv = v_texCoord - 0.5;
+    float angle = atan(uv.y, uv.x);
+    float radius = length(uv);
+
+    // Determine number of mirrored segments based on input intensity
+    float segments = 2.0; // Number of segments when fully active
+    float segment_adjustment = 1.0 + (segments - 1.0) * u_input_variable;
+
+    // Compute mirrored angle, ensuring resulting symmetry
+    float mirrored_angle = mod(angle + 3.14159, 2.0 * 3.14159 / segment_adjustment) - (3.14159 / segment_adjustment);
+    angle = mirrored_angle * segment_adjustment;
+
+    // Reconstruct uv coordinates with adjusted angle
+    uv.x = radius * cos(angle);
+    uv.y = radius * sin(angle);
+    uv += 0.5; // Re-center coordinates
+
+    // Sample texture with potentially mirrored coordinates
+    vec4 color = texture2D(u_video, uv);
+
+    // Blend between original and kaleidoscope effect
+    vec4 original_color = texture2D(u_video, v_texCoord);
+    gl_FragColor = mix(original_color, color, u_input_variable);
+  }
+`;
+*/
+
+/*
+// wave distortion
+const vertex_shader_source = `
+  attribute vec4 a_position;
+  attribute vec2 a_texCoord;
+  varying vec2 v_texCoord; 
+
+  void main() {
+    gl_Position = a_position;
+    v_texCoord = a_texCoord; 
+  } 
+`;
+
+const fragment_shader_source = `
+  precision mediump float;
+  uniform sampler2D u_video;  
+  uniform float u_input_variable; // Controls the wave intensity
+  uniform vec2 u_resolution;
+  varying vec2 v_texCoord;
+
+  void main() { 
+    // Wave parameters
+    float frequency = 10.0;
+    float amplitude = 0.02 * u_input_variable;
+  
+    // Calculate the wave distortion
+    float dx = amplitude * sin(frequency * (v_texCoord.y * u_resolution.y) + u_input_variable * 10.0);
+    float dy = amplitude * cos(frequency * (v_texCoord.x * u_resolution.x) + u_input_variable * 10.0);
+
+    // Apply wave distortion
+    vec2 uv = vec2(v_texCoord.x + dx, v_texCoord.y + dy);
+
+    // Sample the texture at the distorted coordinates
+    gl_FragColor = texture2D(u_video, uv);
+  }
+`;
+*/
+
+/*
+// zoom & rotate
+const vertex_shader_source = `
+  attribute vec4 a_position;
+  attribute vec2 a_texCoord;
+  varying vec2 v_texCoord;
+
+  void main() {
+    gl_Position = a_position;
+    v_texCoord = a_texCoord;
+  }
+`;
+
+const fragment_shader_source = `
+  precision mediump float;
+  uniform sampler2D u_video;
+  uniform float u_input_variable; // Controls the zoom and rotation effect
+  varying vec2 v_texCoord;
+
+  void main() {
+    vec2 uv = v_texCoord - 0.5; // Center coordinates
+
+    // Calculate zoom effect
+    float zoom_factor = 1.0 + u_input_variable * 2.0;
+    uv *= zoom_factor;
+
+    // Calculate rotation effect
+    float angle = u_input_variable * 3.14159 * 0.5; // Rotation in radians
+    float s = sin(angle);
+    float c = cos(angle);
+    uv = vec2(c * uv.x - s * uv.y, s * uv.x + c * uv.y);
+
+    uv += 0.5; // Re-center the UV coordinates
+
+    // Sample the texture at the transformed coordinates
+    gl_FragColor = texture2D(u_video, uv);
+  }
+`; 
+*/
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
