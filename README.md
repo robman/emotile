@@ -57,6 +57,30 @@ To integrate **emotile.js** into your web project:
    import { default as emotile } from './emotile.js';
    ```
 
+### Examples
+Or you can try the examples directly yourself here on github.
+
+#### Simple box
+A basic demo that just makes one square div dance
+https://robman.github.io/emotile/public/examples/mp3-01.html
+
+#### More complex demo
+A more sophisticated demo that shows the timeline working to make 3 boxes dance.
+https://robman.github.io/emotile/public/examples/mp3-02.html
+
+#### A linear gradient
+A demo that shows a single box dancing while the background's linear-gradient is animated to the music.
+https://robman.github.io/emotile/public/examples/mp3-03.html
+
+#### Speaker
+A demo that shows how you can make a static speaker graphic come to life with movement, sound waves and motion blur in time with the music.
+https://robman.github.io/emotile/public/examples/mp3-04.html
+
+#### Video effects
+A demo showing how to use the `emotile_webgl.js` extension that makes it easy to add audio-driven effects to a video stream using WebGL shaders. This includes a swirl shader as default, and 7 other example shaders inline at the end of the code.
+https://robman.github.io/emotile/public/examples/mp3-05.html
+
+
 ## Usage
 
 ### Initialization
