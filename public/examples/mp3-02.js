@@ -1,4 +1,4 @@
-import { default as emotile } from '/emotile.js';
+import { default as emotile } from '../emotile.js';
 
 // Cache DOM elements for reuse
 const divs = [document.getElementById('box2')];

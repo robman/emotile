@@ -1,6 +1,6 @@
 @font-face {
   font-family: NotoSans;
-  src: url('/fonts/NotoSans-VariableFont_wdth,wght.ttf') format('truetype')
+  src: url('../fonts/NotoSans-VariableFont_wdth,wght.ttf') format('truetype')
 }
 
 :root {
