@@ -232,6 +232,28 @@ class emotile_webgl {
     }
     requestAnimationFrame(() => this.render_frame());  // Request next frame render
   }
+
+  // Change the current shaders and compile a new program
+  change_shader(vertex_shader_source, fragment_shader_source) {
+    this.vertex_shader_source = vertex_shader_source;
+    this.fragment_shader_source = fragment_shader_source;
+
+    // Create new shaders
+    const new_vertex_shader = this.create_shader(this.gl.VERTEX_SHADER, vertex_shader_source);
+    const new_fragment_shader = this.create_shader(this.gl.FRAGMENT_SHADER, fragment_shader_source);
+
+    if (!new_vertex_shader || !new_fragment_shader) {
+      console.error('Failed to compile shaders during change.');
+      return;
+    }
+
+    // Create and use the new program
+    const new_program = this.create_program(new_vertex_shader, new_fragment_shader);
+    if (new_program) {
+      this.program = new_program;
+      this.setup_gl_attributes_and_uniforms();  // Re-setup attributes and uniforms
+    }
+  }
 }
 
 // Export emotile_webgl class as the default export
